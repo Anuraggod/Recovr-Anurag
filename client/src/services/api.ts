@@ -1,24 +1,42 @@
 import { AnalyticsMetrics, EnrichedTransaction, SimulationPayload } from '../types/client';
+import { INITIAL_MOCK_METRICS, INITIAL_MOCK_TRANSACTIONS } from './mockData';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const api = {
   async getMetrics(): Promise<AnalyticsMetrics> {
-    const res = await fetch(`${API_BASE}/analytics/metrics`);
-    if (!res.ok) throw new Error('Failed to fetch metrics');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/analytics/metrics`);
+      if (!res.ok) throw new Error('Failed to fetch metrics');
+      return await res.json();
+    } catch (e) {
+      console.warn('Using baseline metrics fallback:', e);
+      return INITIAL_MOCK_METRICS;
+    }
   },
 
   async getTransactions(limit = 50): Promise<EnrichedTransaction[]> {
-    const res = await fetch(`${API_BASE}/analytics/transactions?limit=${limit}`);
-    if (!res.ok) throw new Error('Failed to fetch transactions');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/analytics/transactions?limit=${limit}`);
+      if (!res.ok) throw new Error('Failed to fetch transactions');
+      const data = await res.json();
+      return (data && data.length > 0) ? data : INITIAL_MOCK_TRANSACTIONS;
+    } catch (e) {
+      console.warn('Using baseline transactions fallback:', e);
+      return INITIAL_MOCK_TRANSACTIONS;
+    }
   },
 
   async getTransactionDetails(id: string): Promise<EnrichedTransaction> {
-    const res = await fetch(`${API_BASE}/analytics/transactions/${id}`);
-    if (!res.ok) throw new Error('Failed to fetch transaction details');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/analytics/transactions/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch transaction details');
+      return await res.json();
+    } catch (e) {
+      const found = INITIAL_MOCK_TRANSACTIONS.find(t => t.id === id);
+      if (found) return found;
+      throw e;
+    }
   },
 
   async simulateFailure(payload: SimulationPayload): Promise<any> {

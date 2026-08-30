@@ -1,7 +1,6 @@
-import { db, initDatabase } from './db';
+import { db, initDatabase, memStore } from './db';
 import { FailureClassifierService } from '../services/classifier.service';
 import { RecoveryTimingPredictorService } from '../services/timing.service';
-import { GroqNudgeService } from '../services/groq.service';
 import { NotificationService } from '../services/notification.service';
 import { UPIDeclineCode, User, Transaction, FailureEvent } from '../types';
 
@@ -40,12 +39,14 @@ const SCENARIOS: { code: UPIDeclineCode; reason: string; recoverStatus: 'recover
 
 export async function seedRealisticData(): Promise<void> {
   await initDatabase();
-  const existing = await db.getAllTransactions(1);
-  if (existing.length > 0) {
-    console.log('📦 Database already populated with records. Ready to accept live requests.');
+  
+  // If memory cache or PostgreSQL already has transactions, skip
+  if (memStore.transactions.size > 0) {
+    console.log(`📦 Database loaded with ${memStore.transactions.size} transactions. Ready for requests.`);
     return;
   }
-  console.log('🌱 Seeding realistic UPI transactions, failures, and recovery events...');
+
+  console.log('🌱 Seeding realistic baseline UPI transactions, failures, and recovery events...');
 
   for (let i = 0; i < SCENARIOS.length; i++) {
     const cust = SAMPLE_CUSTOMERS[i % SAMPLE_CUSTOMERS.length];
@@ -137,21 +138,20 @@ export async function seedRealisticData(): Promise<void> {
       const paymentLinkId = `plink_seed_${uuidHex(8)}`;
       const paymentUrl = `https://rzp.io/i/${uuidHex(6)}`;
 
-      const nudgeContent = await GroqNudgeService.generateRecoveryNudge({
-        customerName: cust.name,
-        merchantName: merch.name,
-        amountInRupees: merch.amount,
-        upiDeclineCode: scenario.code,
-        recoveryPaymentUrl: paymentUrl,
-        strategy: classification.recommended_strategy,
-      });
+      let messageContent = `Hey ${cust.name}! 👋\n\nWe noticed a quick bank timeout while checking out ₹${merch.amount} at *${merch.name}*.\n\nYour cart is saved! Tap below to complete in 1 click:\n👉 ${paymentUrl}\n\n_Secure payment powered by Razorpay_`;
+
+      if (scenario.code === 'ZM') {
+        messageContent = `Hey ${cust.name}! 👋\n\nThere was a quick PIN mismatch on your UPI app for ₹${merch.amount} at *${merch.name}*.\n\nTap here to retry with 1 click: ${paymentUrl}`;
+      } else if (scenario.code === 'U30') {
+        messageContent = `Hi ${cust.name}, your ₹${merch.amount} order at *${merch.name}* had a brief bank balance issue. You can retry with another account or card here: ${paymentUrl}`;
+      }
 
       const nudge = await NotificationService.scheduleNudge({
         transactionId: txId,
         predictionId: predId,
         recipientPhone: cust.phone,
         channel: 'whatsapp',
-        messageContent: nudgeContent.whatsapp_message,
+        messageContent,
         paymentLinkId,
         paymentLinkUrl: paymentUrl,
         scheduledDelaySeconds: timing.optimal_retry_delay_seconds,
@@ -163,7 +163,7 @@ export async function seedRealisticData(): Promise<void> {
     }
   }
 
-  console.log('✅ Seeding complete! Database loaded with realistic baseline data.');
+  console.log(`✅ Seeding complete! Database loaded with ${memStore.transactions.size} baseline records.`);
 }
 
 function uuidHex(len: number): string {
@@ -175,7 +175,6 @@ function uuidHex(len: number): string {
   return s;
 }
 
-// Run directly if invoked from CLI
 if (require.main === module) {
   seedRealisticData().catch(console.error);
 }
