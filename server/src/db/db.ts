@@ -105,6 +105,27 @@ export async function initDatabase(): Promise<void> {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
       `);
+
+      // Hydrate in-memory state from PostgreSQL records
+      const uRes = await pool.query('SELECT * FROM users');
+      uRes.rows.forEach(r => memStore.users.set(r.id, r));
+
+      const txRes = await pool.query('SELECT * FROM transactions');
+      txRes.rows.forEach(r => memStore.transactions.set(r.id, r));
+
+      const fRes = await pool.query('SELECT * FROM failure_events');
+      fRes.rows.forEach(r => memStore.failureEvents.set(r.id, r));
+
+      const pRes = await pool.query('SELECT * FROM recovery_predictions');
+      pRes.rows.forEach(r => memStore.predictions.set(r.id, {
+        ...r,
+        feature_signals: typeof r.feature_signals === 'string' ? JSON.parse(r.feature_signals) : r.feature_signals
+      }));
+
+      const nRes = await pool.query('SELECT * FROM nudges_sent');
+      nRes.rows.forEach(r => memStore.nudges.set(r.id, r));
+
+      console.log(`📦 Synchronized ${txRes.rows.length} existing transactions from PostgreSQL database.`);
       return;
     }
   } catch (err: any) {
