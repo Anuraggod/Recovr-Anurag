@@ -61,17 +61,44 @@ ${context.discountOffer ? `Incentive: ${context.discountOffer}` : ''}
 
 Generate the recovery nudge JSON now:`;
 
-        const completion = await groqClient.chat.completions.create({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          model: config.groq.model || 'llama-3.3-70b-versatile',
-          temperature: 0.5,
-          response_format: { type: 'json_object' },
-        });
+        const candidateModels = [
+          config.groq.model || 'openai/gpt-oss-120b',
+          'openai/gpt-oss-120b',
+          'openai/gpt-oss-20b',
+          'llama-3.3-70b-versatile',
+          'llama-3.1-8b-instant',
+          'qwen/qwen3.8-27b',
+        ];
 
-        const content = completion.choices[0]?.message?.content;
+        let content = null;
+        let successfulModel = '';
+
+        for (const modelToTry of candidateModels) {
+          try {
+            const completion = await groqClient.chat.completions.create({
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              model: modelToTry,
+              temperature: 0.5,
+              response_format: { type: 'json_object' },
+            });
+
+            content = completion.choices[0]?.message?.content;
+            if (content) {
+              successfulModel = modelToTry;
+              break;
+            }
+          } catch (modelErr: any) {
+            // Try next candidate model if 404/model_not_found
+            if (modelErr.status === 404 || modelErr.message?.includes('model')) {
+              continue;
+            }
+            throw modelErr;
+          }
+        }
+
         if (content) {
           const parsed = JSON.parse(content);
           const generationTimeMs = Date.now() - startTime;
@@ -81,7 +108,7 @@ Generate the recovery nudge JSON now:`;
             sms_message: parsed.sms_message || this.buildFallbackSMS(context),
             tone: parsed.tone || 'empathetic_urgent',
             headline: parsed.headline || `Complete your ₹${context.amountInRupees} order at ${context.merchantName}`,
-            model_used: `Groq (${config.groq.model})`,
+            model_used: `Groq (${successfulModel})`,
             generation_time_ms: generationTimeMs,
           };
         }
