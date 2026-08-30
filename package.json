@@ -1,0 +1,19 @@
+{
+  "name": "recovr",
+  "version": "1.0.0",
+  "description": "AI-powered engine that recovers Business Decline UPI payment failures through predictive retry timing and personalized recovery nudges.",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "seed": "npm run seed --prefix server",
+    "test": "npm test --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "author": "Anurag (Anuraggod)",
+  "license": "MIT"
+}
