@@ -241,7 +241,7 @@ export class RecoveryController {
    */
   public static async triggerSelfRecovery(req: Request, res: Response): Promise<void> {
     try {
-      const { transactionId } = req.params;
+      const transactionId = String(req.params.transactionId);
       const tx = await db.getTransaction(transactionId);
       if (!tx) {
         res.status(404).json({ error: 'Transaction not found' });
@@ -273,7 +273,7 @@ export class RecoveryController {
    */
   public static async forceDispatchNudge(req: Request, res: Response): Promise<void> {
     try {
-      const { nudgeId } = req.params;
+      const nudgeId = String(req.params.nudgeId);
       await db.updateNudgeStatus(nudgeId, 'sent');
       
       streamService.broadcast('nudge_dispatched', {

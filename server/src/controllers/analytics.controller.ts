@@ -23,7 +23,7 @@ export class AnalyticsController {
 
   public static async getTransactionById(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const tx = await db.getTransactionDetails(id);
       if (!tx) {
         res.status(404).json({ error: 'Transaction not found' });
