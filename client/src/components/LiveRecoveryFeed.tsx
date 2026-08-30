@@ -13,7 +13,7 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
   selectedTxId,
   onSelectTx,
 }) => {
-  const [filter, setFilter] = useState<'ALL' | 'RECOVERED' | 'BD' | 'TECHNICAL'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'BD' | 'RECOVERED' | 'TECHNICAL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredList = transactions.filter((tx) => {
@@ -34,57 +34,88 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
   });
 
   return (
-    <div className="glass-panel rounded-2xl p-5 border border-slate-800/80 flex flex-col h-full">
+    <div className="glass-panel rounded-2xl p-5 border border-slate-800/80 flex flex-col h-full space-y-4">
       
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+      {/* 1. Feed Title & Live Beacon */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
             <Activity className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white font-sans flex items-center gap-2">
-              Live Failure & Recovery Telemetry
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300">
-                {filteredList.length} events
-              </span>
+            <h3 className="text-sm font-bold text-white font-sans tracking-tight">
+              Live Failure & Recovery Feed
             </h3>
-            <p className="text-xs text-slate-400">Real-time incoming UPI declines from Razorpay webhook</p>
+            <p className="text-[11px] text-slate-400 font-sans">
+              Real-time incoming UPI declines
+            </p>
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800/90 text-xs">
-          {(['ALL', 'BD', 'RECOVERED', 'TECHNICAL'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all text-[11px] ${
-                filter === tab
-                  ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {tab === 'BD' ? 'Business Declines' : tab}
-            </button>
-          ))}
-        </div>
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          {filteredList.length} events
+        </span>
       </div>
 
-      {/* Search Input */}
-      <div className="relative mb-3">
+      {/* 2. Full-Width Segmented Filter Controls */}
+      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800/90 text-xs">
+        <button
+          onClick={() => setFilter('ALL')}
+          className={`py-1.5 px-2 rounded-lg font-medium transition-all text-[11px] text-center truncate ${
+            filter === 'ALL'
+              ? 'bg-slate-800 text-white font-semibold shadow-sm border border-slate-700'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilter('BD')}
+          className={`py-1.5 px-2 rounded-lg font-medium transition-all text-[11px] text-center truncate ${
+            filter === 'BD'
+              ? 'bg-cyan-500/20 text-cyan-300 font-semibold shadow-sm border border-cyan-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          BD Only
+        </button>
+        <button
+          onClick={() => setFilter('RECOVERED')}
+          className={`py-1.5 px-2 rounded-lg font-medium transition-all text-[11px] text-center truncate ${
+            filter === 'RECOVERED'
+              ? 'bg-emerald-500/20 text-emerald-300 font-semibold shadow-sm border border-emerald-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Recovered
+        </button>
+        <button
+          onClick={() => setFilter('TECHNICAL')}
+          className={`py-1.5 px-2 rounded-lg font-medium transition-all text-[11px] text-center truncate ${
+            filter === 'TECHNICAL'
+              ? 'bg-rose-500/20 text-rose-300 font-semibold shadow-sm border border-rose-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Technical
+        </button>
+      </div>
+
+      {/* 3. Search Input */}
+      <div className="relative">
         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         <input
           type="text"
-          placeholder="Filter by customer, merchant (Swiggy, Zomato), or decline code (U30, ZM)..."
+          placeholder="Filter by customer, merchant, or decline code..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-9 pr-4 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50 transition-all font-sans"
         />
       </div>
 
-      {/* Transaction Feed List */}
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[580px]">
+      {/* 4. Transaction Feed List */}
+      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[580px]">
         {filteredList.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-xs">
             No transaction events matching current criteria.
@@ -122,20 +153,20 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
                 <div className="flex items-center justify-between gap-3">
                   
                   {/* Merchant & Customer Info */}
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700/60 flex items-center justify-center text-xs font-bold text-white font-mono shrink-0 mt-0.5">
                       {tx.merchant_name.substring(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white text-xs font-sans">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-white text-xs font-sans truncate">
                           {tx.merchant_name}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-[10px] font-mono text-slate-500">
                           #{tx.order_id || tx.id.substring(0, 8)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-300 mt-0.5">
+                      <p className="text-[11px] text-slate-300 mt-0.5 truncate">
                         {tx.user?.name || 'Customer'} • <span className="font-mono text-slate-400">{tx.user?.phone}</span>
                       </p>
                     </div>
@@ -163,7 +194,7 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                          <XCircle className="w-2.5 h-2.5" /> NON-RECOVERABLE
+                          <XCircle className="w-2.5 h-2.5" /> TECHNICAL
                         </span>
                       )}
                     </div>
@@ -173,8 +204,8 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
 
                 {/* Decline Code and Rationale snippet */}
                 <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span className="flex items-center gap-1.5">
-                    <span className={`px-1.5 py-0.2 rounded font-bold ${
+                  <span className="flex items-center gap-1.5 min-w-0 pr-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                       upiCode === 'U30' ? 'bg-amber-950/60 text-amber-300 border border-amber-800/40' :
                       upiCode === 'ZM' ? 'bg-purple-950/60 text-purple-300 border border-purple-800/40' :
                       upiCode === 'XB' ? 'bg-blue-950/60 text-blue-300 border border-blue-800/40' :
@@ -182,12 +213,12 @@ export const LiveRecoveryFeed: React.FC<LiveRecoveryFeedProps> = ({
                     }`}>
                       {upiCode}
                     </span>
-                    <span className="truncate max-w-[190px] text-slate-400 font-sans">
+                    <span className="truncate text-slate-400 font-sans text-[11px]">
                       {tx.failure_event?.error_description || 'Payment failed'}
                     </span>
                   </span>
 
-                  <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                  <span className="text-[10px] text-slate-500 flex items-center gap-1 shrink-0 group-hover:text-emerald-400 transition-colors">
                     Inspect <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                   </span>
                 </div>
