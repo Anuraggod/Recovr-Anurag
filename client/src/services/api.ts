@@ -1,7 +1,7 @@
-import { AnalyticsMetrics, EnrichedTransaction, SimulationPayload } from '../types/client';
+import { AnalyticsMetrics, EnrichedTransaction, SimulationPayload, RecoveryStrategy } from '../types/client';
 import { INITIAL_MOCK_METRICS, INITIAL_MOCK_TRANSACTIONS } from './mockData';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
 
 // In-memory client-side reactive store for seamless offline/online resilience
 let localTransactions: EnrichedTransaction[] = [...INITIAL_MOCK_TRANSACTIONS];
@@ -28,10 +28,10 @@ function recalculateLocalMetrics(): AnalyticsMetrics {
     ? Math.round((total_recovered_count / total_failed_count) * 1000) / 10
     : 75.0;
 
-  const decline_code_breakdown: Record<string, number> = {};
+  const decline_breakdown: Record<string, number> = {};
   for (const t of localTransactions) {
     const code = t.failure_event?.upi_decline_code || 'U30';
-    decline_code_breakdown[code] = (decline_code_breakdown[code] || 0) + 1;
+    decline_breakdown[code] = (decline_breakdown[code] || 0) + 1;
   }
 
   localMetrics = {
@@ -42,13 +42,12 @@ function recalculateLocalMetrics(): AnalyticsMetrics {
     business_decline_count,
     business_decline_recovery_rate_pct,
     overall_recovery_rate_pct,
-    avg_recovery_latency_minutes: 14.5,
-    channel_conversion_lift: {
-      whatsapp_conversion_pct: 84,
-      sms_conversion_pct: 62,
-      raw_checkout_conversion_pct: 31,
+    average_recovery_time_minutes: 14.5,
+    decline_breakdown,
+    channel_effectiveness: {
+      whatsapp: { sent: 7, recovered: 6, rate: 85.7 },
+      sms: { sent: 7, recovered: 4, rate: 57.1 },
     },
-    decline_code_breakdown,
   };
 
   return localMetrics;
@@ -112,10 +111,10 @@ export const api = {
     const amountInPaise = Math.round(payload.amount_in_rupees * 100);
     const upiCode = payload.upi_decline_code;
 
-    const isRecoverable = upiCode !== 'ZA' && upiCode !== 'U19';
+    const isRecoverable = upiCode !== 'ZA';
     const declineType = isRecoverable ? 'BUSINESS_DECLINE' : 'TECHNICAL_DECLINE';
 
-    let strategy = 'TIMED_RECOVERY_NUDGE';
+    let strategy: RecoveryStrategy = 'TIMED_RECOVERY_NUDGE';
     let delaySec = 3600;
     let explanation = 'Insufficient bank balance. High recovery potential if nudged after account funding window.';
     let timingRationale = '1-hour cooldown allows fund transfer without being intrusive.';
@@ -126,17 +125,17 @@ export const api = {
       explanation = 'Wrong MPIN is a momentary user error. Immediate recovery link achieves 84% conversion.';
       timingRationale = 'Instant 5-minute link window yields maximum recovery before customer abandons order.';
     } else if (upiCode === 'XB') {
-      strategy = 'ABANDONED_CART_DISCOUNT_NUDGE';
+      strategy = 'TIMED_RECOVERY_NUDGE';
       delaySec = 1200;
       explanation = 'Customer dropped off at checkout. WhatsApp reminder with 1-tap retry recovers checkout intent.';
       timingRationale = '20-minute gentle reminder restores interrupted grocery/shopping cart.';
     } else if (upiCode === 'U28') {
-      strategy = 'NEXT_DAY_RESET_NUDGE';
+      strategy = 'ALTERNATIVE_METHOD_SUGGESTION';
       delaySec = 36000;
-      explanation = 'Daily UPI limit exceeded. Auto-scheduled for next morning 8:30 AM when bank limit resets.';
+      explanation = 'Daily UPI limit exceeded. Suggest alternative payment rail (cards/NetBanking) or next morning reset.';
       timingRationale = 'Scheduled for 8:30 AM following morning after NPCI cumulative debit limit resets.';
     } else if (!isRecoverable) {
-      strategy = 'NO_ACTION_TECHNICAL_ERROR';
+      strategy = 'NO_ACTION_TECHNICAL_FAILURE';
       delaySec = 0;
       explanation = 'Non-recoverable technical decline. Automated nudges suppressed to prevent customer spam.';
       timingRationale = 'No retry scheduled to protect merchant brand reputation.';
@@ -165,9 +164,7 @@ export const api = {
         phone: payload.customer_phone,
         upi_id: `${payload.customer_name.toLowerCase().replace(/\s+/g, '')}@okhdfcbank`,
         historical_orders_count: 6,
-        historical_success_rate: payload.historical_success_rate,
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
+        historical_success_rate: payload.historical_success_rate || 0.9,
       },
       failure_event: {
         id: `fail_${Math.random().toString(36).substring(2, 8)}`,
@@ -193,6 +190,8 @@ export const api = {
           customer_loyalty_boost: 0.1,
           amount_sensitivity_factor: 0.05,
           hour_of_day_penalty: 0,
+          failure_frequency_penalty: 0,
+          base_probability: 0.85,
         },
         created_at: new Date().toISOString(),
         explanation,

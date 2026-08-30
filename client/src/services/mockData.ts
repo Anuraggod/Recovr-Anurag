@@ -8,17 +8,16 @@ export const INITIAL_MOCK_METRICS: AnalyticsMetrics = {
   business_decline_count: 7,
   business_decline_recovery_rate_pct: 78.5,
   overall_recovery_rate_pct: 75.0,
-  avg_recovery_latency_minutes: 14.5,
-  channel_conversion_lift: {
-    whatsapp_conversion_pct: 84,
-    sms_conversion_pct: 62,
-    raw_checkout_conversion_pct: 31,
-  },
-  decline_code_breakdown: {
+  average_recovery_time_minutes: 14.5,
+  decline_breakdown: {
     'U30': 3,
     'ZM': 2,
     'XB': 2,
     'ZA': 1,
+  },
+  channel_effectiveness: {
+    whatsapp: { sent: 7, recovered: 6, rate: 85.7 },
+    sms: { sent: 7, recovered: 4, rate: 57.1 },
   },
 };
 
@@ -44,8 +43,6 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       upi_id: 'rahul@okhdfcbank',
       historical_orders_count: 12,
       historical_success_rate: 0.94,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
     },
     failure_event: {
       id: 'fail_seed_1',
@@ -71,6 +68,8 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
         customer_loyalty_boost: 0.15,
         amount_sensitivity_factor: 0.1,
         hour_of_day_penalty: 0,
+        failure_frequency_penalty: 0,
+        base_probability: 0.85,
       },
       created_at: new Date(Date.now() - 3600000).toISOString(),
       explanation: 'Wrong PIN is a high-intent momentary slip. Customer immediately recovers via a 1-tap pre-filled checkout link.',
@@ -113,8 +112,6 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       upi_id: 'priya@icici',
       historical_orders_count: 8,
       historical_success_rate: 0.91,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
     },
     failure_event: {
       id: 'fail_seed_2',
@@ -140,6 +137,8 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
         customer_loyalty_boost: 0.1,
         amount_sensitivity_factor: 0.05,
         hour_of_day_penalty: 0,
+        failure_frequency_penalty: 0,
+        base_probability: 0.82,
       },
       created_at: new Date(Date.now() - 7200000).toISOString(),
       explanation: 'Insufficient balance requires funding window or alternative UPI account/card.',
@@ -182,8 +181,6 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       upi_id: 'ananya@paytm',
       historical_orders_count: 5,
       historical_success_rate: 0.88,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
     },
     failure_event: {
       id: 'fail_seed_3',
@@ -201,7 +198,7 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       is_recoverable: true,
       decline_type: 'BUSINESS_DECLINE',
       confidence_score: 0.89,
-      recommended_strategy: 'ABANDONED_CART_DISCOUNT_NUDGE',
+      recommended_strategy: 'TIMED_RECOVERY_NUDGE',
       optimal_retry_delay_seconds: 1200,
       predicted_optimal_time: new Date(Date.now() - 9600000).toISOString(),
       feature_signals: {
@@ -209,6 +206,8 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
         customer_loyalty_boost: 0.08,
         amount_sensitivity_factor: 0.12,
         hour_of_day_penalty: 0,
+        failure_frequency_penalty: 0,
+        base_probability: 0.78,
       },
       created_at: new Date(Date.now() - 10800000).toISOString(),
       explanation: 'User abandoned payment screen. Fast WhatsApp nudge recovers lost intent.',
@@ -251,8 +250,6 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       upi_id: 'vikram@oksbi',
       historical_orders_count: 20,
       historical_success_rate: 0.95,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
     },
     failure_event: {
       id: 'fail_seed_4',
@@ -270,7 +267,7 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       is_recoverable: true,
       decline_type: 'BUSINESS_DECLINE',
       confidence_score: 0.94,
-      recommended_strategy: 'NEXT_DAY_RESET_NUDGE',
+      recommended_strategy: 'ALTERNATIVE_METHOD_SUGGESTION',
       optimal_retry_delay_seconds: 36000,
       predicted_optimal_time: new Date(Date.now() + 18000000).toISOString(),
       feature_signals: {
@@ -278,9 +275,11 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
         customer_loyalty_boost: 0.2,
         amount_sensitivity_factor: -0.05,
         hour_of_day_penalty: 0,
+        failure_frequency_penalty: 0,
+        base_probability: 0.88,
       },
       created_at: new Date(Date.now() - 14400000).toISOString(),
-      explanation: 'Daily UPI limit exceeded. Auto-scheduled for next morning 8:30 AM when bank NPCI limit resets.',
+      explanation: 'Daily UPI limit exceeded. Auto-scheduled for next morning 8:30 AM when bank limit resets or switch to NetBanking.',
       timing_rationale: 'Scheduled for 8:30 AM following morning after NPCI cumulative debit limit resets.',
     },
     nudges: [
@@ -320,8 +319,6 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       upi_id: 'sneha@axisbank',
       historical_orders_count: 2,
       historical_success_rate: 0.75,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
     },
     failure_event: {
       id: 'fail_seed_5',
@@ -339,7 +336,7 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
       is_recoverable: false,
       decline_type: 'TECHNICAL_DECLINE',
       confidence_score: 0.12,
-      recommended_strategy: 'NO_ACTION_TECHNICAL_ERROR',
+      recommended_strategy: 'NO_ACTION_TECHNICAL_FAILURE',
       optimal_retry_delay_seconds: 0,
       predicted_optimal_time: new Date(Date.now() - 18000000).toISOString(),
       feature_signals: {
@@ -347,6 +344,8 @@ export const INITIAL_MOCK_TRANSACTIONS: EnrichedTransaction[] = [
         customer_loyalty_boost: 0,
         amount_sensitivity_factor: 0,
         hour_of_day_penalty: 0,
+        failure_frequency_penalty: 0.2,
+        base_probability: 0.1,
       },
       created_at: new Date(Date.now() - 18000000).toISOString(),
       explanation: 'Dormant account is a non-recoverable hard decline. Automated spam nudges suppressed.',
