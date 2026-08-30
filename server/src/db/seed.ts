@@ -1,4 +1,4 @@
-import { db } from './db';
+import { db, initDatabase } from './db';
 import { FailureClassifierService } from '../services/classifier.service';
 import { RecoveryTimingPredictorService } from '../services/timing.service';
 import { GroqNudgeService } from '../services/groq.service';
@@ -39,6 +39,7 @@ const SCENARIOS: { code: UPIDeclineCode; reason: string; recoverStatus: 'recover
 ];
 
 export async function seedRealisticData(): Promise<void> {
+  await initDatabase();
   console.log('🌱 Seeding realistic UPI transactions, failures, and recovery events...');
 
   for (let i = 0; i < SCENARIOS.length; i++) {
