@@ -39,20 +39,28 @@ app.use('/api/analytics', analyticsRoutes);
 // Server startup
 async function bootstrap() {
   try {
-    await initDatabase();
-    await seedRealisticData();
-
-    app.listen(config.port, () => {
+    const server = app.listen(config.port, async () => {
       console.log(`\n======================================================`);
       console.log(`🚀 RECOVR AI ENGINE SERVER RUNNING ON PORT ${config.port}`);
       console.log(`📡 Health Check: http://localhost:${config.port}/api/health`);
       console.log(`⚡ Razorpay Webhooks: http://localhost:${config.port}/api/webhooks/razorpay`);
-      console.log(`🤖 Groq Model: ${config.groq.model} (Configured: ${config.groq.isConfigured})`);
+      console.log(`🤖 Groq Model: ${config.groq.model} (Live Configured: ${config.groq.isConfigured})`);
       console.log(`======================================================\n`);
+
+      await initDatabase();
+      await seedRealisticData();
+    });
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌ Error: Port ${config.port} is already in use by another process.`);
+        console.error(`👉 Tip: Stop any existing server running on port ${config.port} or change PORT in .env.\n`);
+      } else {
+        console.error('❌ Server error:', err);
+      }
     });
   } catch (error) {
     console.error('❌ Failed to bootstrap Recovr server:', error);
-    process.exit(1);
   }
 }
 

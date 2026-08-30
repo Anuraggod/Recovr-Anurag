@@ -40,6 +40,11 @@ const SCENARIOS: { code: UPIDeclineCode; reason: string; recoverStatus: 'recover
 
 export async function seedRealisticData(): Promise<void> {
   await initDatabase();
+  const existing = await db.getAllTransactions(1);
+  if (existing.length > 0) {
+    console.log('📦 Database already populated with records. Ready to accept live requests.');
+    return;
+  }
   console.log('🌱 Seeding realistic UPI transactions, failures, and recovery events...');
 
   for (let i = 0; i < SCENARIOS.length; i++) {
