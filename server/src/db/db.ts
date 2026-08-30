@@ -24,6 +24,7 @@ let pgPool: Pool | null = null;
 let usePostgres = false;
 
 export async function initDatabase(): Promise<void> {
+  if (pgPool) return;
   try {
     if (config.databaseUrl && !config.databaseUrl.includes('placeholder')) {
       const pool = new Pool({
